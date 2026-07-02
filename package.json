@@ -4,15 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "node scripts/setup-fonts.js && prisma generate && next build",
     "start": "next start",
+    "fonts:setup": "node scripts/setup-fonts.js",
     "db:push": "prisma db push",
     "db:migrate": "tsx prisma/migrate-safe.ts",
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",
+    "@resvg/resvg-js": "^2.6.2",
     "bcryptjs": "^2.4.3",
+    "html2canvas": "^1.4.1",
     "html5-qrcode": "^2.3.8",
     "jose": "^5.9.6",
     "lucide-react": "^0.469.0",

@@ -37,6 +37,25 @@ export default function EventTicket({
   }, []);
 
   async function handleDownload() {
+    if (ticketRef.current) {
+      try {
+        const html2canvas = (await import('html2canvas')).default;
+        const canvas = await html2canvas(ticketRef.current, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#0f172a',
+        });
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ticket-${rollNo}.png`;
+        a.click();
+        return;
+      } catch {
+        // fall back to server-generated image
+      }
+    }
+
     if (downloadUrl) {
       const res = await fetch(downloadUrl);
       const blob = await res.blob();

@@ -1,11 +1,12 @@
 FROM node:20-alpine
 WORKDIR /app
 
-RUN apk add --no-cache libc6-compat openssl fontconfig ttf-dejavu ttf-liberation
+RUN apk add --no-cache libc6-compat openssl fontconfig unzip wget
 RUN fc-cache -f
 
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
+COPY scripts ./scripts
 
 ENV DATABASE_URL="file:./prisma/prod.db"
 RUN npm ci

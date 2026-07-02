@@ -9,4 +9,6 @@ prisma/prod.db-journal
 uploads/
 *.log
 .DS_Store
-.vercel
+assets/fonts/*.ttf
+assets/fonts/dejavu.zip
+assets/fonts/extract/
