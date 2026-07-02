@@ -1,7 +1,8 @@
 FROM node:20-alpine
 WORKDIR /app
 
-RUN apk add --no-cache libc6-compat openssl
+RUN apk add --no-cache libc6-compat openssl fontconfig ttf-dejavu ttf-liberation
+RUN fc-cache -f
 
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
