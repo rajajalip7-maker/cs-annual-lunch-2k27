@@ -4,6 +4,9 @@ WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
 
 COPY package.json package-lock.json* ./
+COPY prisma ./prisma
+
+ENV DATABASE_URL="file:./prisma/prod.db"
 RUN npm ci
 
 COPY . .
@@ -17,6 +20,5 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-ENV DATABASE_URL="file:./prisma/prod.db"
 
 CMD ["sh", "-c", "npx prisma db push && npm run db:seed && npm start"]
