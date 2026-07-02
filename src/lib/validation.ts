@@ -96,6 +96,6 @@ export const loginSchema = z.object({
 export const manualOverrideSchema = z.object({
   entryCode: z
     .string()
-    .regex(/^CS26-[A-Z0-9]{6}$/i, 'Invalid ticket ID (e.g. CS26-7K4M2P)'),
+    .regex(/^CS27-[A-Z0-9]{6}$/i, 'Invalid ticket ID (e.g. CS27-7K4M2P)'),
   reason: z.string().min(10, 'Reason required for manual entry'),
 });

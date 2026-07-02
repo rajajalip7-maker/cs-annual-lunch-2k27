@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Upload, AlertCircle } from 'lucide-react';
 import { PAYMENT_INSTRUCTIONS, getHostelOptionsForGender } from '@/lib/validation';
+import { EVENT } from '@/lib/event';
 
 export default function RegisterCompletePage() {
   const router = useRouter();
@@ -84,7 +85,7 @@ export default function RegisterCompletePage() {
         </Link>
 
         <div className="card p-8">
-          <h1 className="mb-2 text-2xl font-bold text-white">Computer Science Annual Lunch 2k26</h1>
+          <h1 className="mb-2 text-2xl font-bold text-white">{EVENT.name}</h1>
           <p className="mb-6 text-slate-400">Complete your registration and upload payment proof.</p>
 
           {user && (

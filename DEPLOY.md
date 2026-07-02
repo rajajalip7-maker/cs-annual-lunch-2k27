@@ -1,40 +1,48 @@
-# Deploy Guide — CS Annual Lunch Ticketing
+# Deploy Guide — CS Annual Lunch 2k27
 
 This app uses **SQLite** and **local file uploads**, so deploy on **Railway** (recommended) or **Render** — not Vercel (serverless has no persistent disk).
 
-## Step 1 — Push to GitHub
+## Your public link (goal)
 
-### Install Git (if needed)
-Download from https://git-scm.com/download/win
+After deploy, share:
+
+**`https://cs-annual-lunch-2k27.up.railway.app/register`**
+
+(Railway may add `-production` in the middle — you can rename the service to get a cleaner URL.)
+
+---
+
+## Step 1 — Push to GitHub
 
 ### Create repo on GitHub
 1. Go to https://github.com/new
-2. Name: `event-ticketing-system` (or any name)
+2. Name: **`cs-annual-lunch-2k27`**
 3. **Do not** add README/license (we already have code)
 4. Click **Create repository**
 
 ### Push from your PC
 ```powershell
 cd "C:\Users\HS TRADER\event-ticketing-system"
-git init
-git add .
-git commit -m "Initial commit: CS Annual Lunch ticketing system"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/event-ticketing-system.git
+gh auth login
+gh repo create cs-annual-lunch-2k27 --public --source=. --remote=origin --push
+```
+
+Or manually:
+```powershell
+git remote add origin https://github.com/YOUR_USERNAME/cs-annual-lunch-2k27.git
 git push -u origin main
 ```
 
-Replace `YOUR_USERNAME` with your GitHub username.
-
 ---
 
-## Step 2 — Deploy on Railway (free trial / hobby)
+## Step 2 — Deploy on Railway
 
 1. Go to https://railway.app and sign in with **GitHub**
-2. **New Project** → **Deploy from GitHub repo** → select `event-ticketing-system`
-3. Railway will detect the `Dockerfile` and build automatically
-4. Open the service → **Settings** → **Networking** → **Generate Domain**
-5. You get a link like: `https://event-ticketing-system-production.up.railway.app`
+2. **New Project** → **Deploy from GitHub repo** → select **`cs-annual-lunch-2k27`**
+3. Click the service → **Settings** → rename service to **`cs-annual-lunch-2k27`**
+4. **Networking** → **Generate Domain** → you get something like:
+   `https://cs-annual-lunch-2k27-production.up.railway.app`
+5. Optional: **Custom Domain** → add e.g. `cslunch2k27.youruniversity.edu.pk` if your IT provides one
 
 ### Add persistent storage (important)
 Without volumes, database and uploads reset on redeploy.
@@ -65,9 +73,9 @@ Generate secrets (PowerShell):
 
 | Audience | URL |
 |----------|-----|
-| Students (register) | `https://YOUR-DOMAIN/register` |
-| Admin | `https://YOUR-DOMAIN/admin/login` |
-| Gate scanner | `https://YOUR-DOMAIN/gate` |
+| Students (register) | `https://cs-annual-lunch-2k27.up.railway.app/register` |
+| Admin | `https://cs-annual-lunch-2k27.up.railway.app/admin/login` |
+| Gate scanner | `https://cs-annual-lunch-2k27.up.railway.app/gate` |
 
 Default logins (change via env vars before going live):
 - Admin: `admin` / `admin123`

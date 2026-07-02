@@ -18,14 +18,14 @@ export function generateEntryCodeCandidate(): string {
   for (let i = 0; i < 6; i++) {
     suffix += ENTRY_CHARS[Math.floor(Math.random() * ENTRY_CHARS.length)];
   }
-  return `CS26-${suffix}`;
+  return `CS27-${suffix}`;
 }
 
 export function normalizeEntryCode(code: string): string {
   return code.trim().toUpperCase();
 }
 
-export async function signQrPayload(ticketUid: string, eventId = 'cs-annual-lunch-2k26') {
+export async function signQrPayload(ticketUid: string, eventId = 'cs-annual-lunch-2k27') {
   const issuedAt = Math.floor(Date.now() / 1000);
   const expiresAt = issuedAt + 60 * 60 * 24 * 30; // 30 days
 

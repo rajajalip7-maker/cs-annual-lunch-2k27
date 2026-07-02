@@ -108,7 +108,7 @@ function CodeRain() {
     'const lunch = await celebrate();',
     'import { CS } from "department";',
     'class Student extends CSFamily {}',
-    'export default annualLunch2k26;',
+    'export default annualLunch2k27;',
     'async function register() { return true; }',
     'if (csStudent) joinLunch();',
   ];

@@ -250,12 +250,12 @@ export default function GateScannerPage() {
         ) : (
           <div className="card mb-6 p-6">
             <p className="mb-4 text-sm text-slate-400">
-              Enter the unique Ticket ID printed on the pass (e.g. CS26-7K4M2P)
+              Enter the unique Ticket ID printed on the pass (e.g. CS27-7K4M2P)
             </p>
             <div className="space-y-3">
               <input
                 className="input text-center font-mono text-lg uppercase tracking-widest"
-                placeholder="CS26-XXXXXX"
+                placeholder="CS27-XXXXXX"
                 value={entryCode}
                 onChange={(e) => setEntryCode(e.target.value.toUpperCase())}
               />

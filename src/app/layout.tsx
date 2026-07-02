@@ -5,7 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Computer Science Annual Lunch 2k26 — Registration',
+  title: 'Computer Science Annual Lunch 2k27 — Registration',
   description: 'Event registration, payment verification & ticketing system',
 };
 
