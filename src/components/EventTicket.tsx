@@ -37,35 +37,45 @@ export default function EventTicket({
   }, []);
 
   async function handleDownload() {
+    if (downloadUrl) {
+      try {
+        const res = await fetch(`${downloadUrl}?t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Download failed');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ticket-${rollNo}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        return;
+      } catch {
+        // fall back to on-screen capture
+      }
+    }
+
     if (ticketRef.current) {
       try {
         const html2canvas = (await import('html2canvas')).default;
-        const canvas = await html2canvas(ticketRef.current, {
+        const el = ticketRef.current;
+        const canvas = await html2canvas(el, {
           scale: 2,
           useCORS: true,
           backgroundColor: '#0f172a',
+          height: el.scrollHeight,
+          windowHeight: el.scrollHeight,
+          scrollY: -window.scrollY,
         });
         const url = canvas.toDataURL('image/png');
         const a = document.createElement('a');
         a.href = url;
         a.download = `ticket-${rollNo}.png`;
         a.click();
-        return;
       } catch {
-        // fall back to server-generated image
+        // no-op
       }
-    }
-
-    if (downloadUrl) {
-      const res = await fetch(downloadUrl);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `ticket-${rollNo}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-      return;
     }
   }
 
@@ -74,7 +84,6 @@ export default function EventTicket({
       <div
         ref={ticketRef}
         className="relative w-full max-w-[360px] overflow-hidden rounded-3xl border-2 border-indigo-500/40 shadow-2xl"
-        style={{ aspectRatio: '2/3' }}
       >
         {/* Background */}
         <div
@@ -86,7 +95,7 @@ export default function EventTicket({
         {/* Accent bar */}
         <div className="absolute left-0 right-0 top-0 h-1.5 bg-gradient-to-r from-indigo-500 to-cyan-400" />
 
-        <div className="relative flex h-full flex-col p-5 text-white">
+        <div className="relative flex flex-col p-5 pb-6 text-white">
           {/* Header */}
           <div className="text-center">
             <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
@@ -133,7 +142,7 @@ export default function EventTicket({
           </div>
 
           {/* QR */}
-          <div className="mt-auto flex justify-center pt-3">
+          <div className="mt-4 flex justify-center">
             <div className="rounded-xl bg-white p-2 shadow-lg">
               <img src={qrDataUrl} alt="Entry QR Code" className="h-36 w-36" />
             </div>
