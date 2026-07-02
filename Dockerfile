@@ -23,4 +23,4 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-CMD ["sh", "-c", "npx prisma db push && npm run db:seed && npm start"]
+CMD ["npx", "tsx", "scripts/docker-start.ts"]

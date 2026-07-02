@@ -44,15 +44,23 @@ git push -u origin main
    `https://cs-annual-lunch-2k27-production.up.railway.app`
 5. Optional: **Custom Domain** → add e.g. `cslunch2k27.youruniversity.edu.pk` if your IT provides one
 
-### Add persistent storage (important)
-Without volumes, database and uploads reset on redeploy.
+### Add persistent storage (REQUIRED — or all data is lost on every redeploy)
+
+**Without volumes, every code update wipes registrations, users, and payments.**
 
 1. In Railway project → your service → **Volumes**
-2. Add volume mount:
-   - Mount path: `/app/prisma` (for database)
-   - Mount path: `/app/uploads` (for payment screenshots)
+2. Click **Add Volume** → Mount path: **`/app/prisma`**
+3. Click **Add Volume** again → Mount path: **`/app/uploads`**
 
 ### Environment variables (Railway → Variables)
+
+**`DATABASE_URL` must be exactly:**
+```
+file:./prisma/prod.db
+```
+
+Do **not** use `file:./dev.db` on Railway — that stores data outside the volume and it will be deleted.
+
 ```
 JWT_SECRET=your-long-random-secret-here
 QR_HMAC_SECRET=your-qr-secret-here
@@ -63,6 +71,7 @@ DATABASE_URL=file:./prisma/prod.db
 ```
 
 Generate secrets (PowerShell):
+
 ```powershell
 [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
 ```
