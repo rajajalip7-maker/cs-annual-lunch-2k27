@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(uuid())
+  name              String
+  rollNo            String   @unique
+  email             String   @unique
+  passwordHash      String
+  mobile            String   @default("")
+  affiliation       String   @default("")
+  gender            String   @default("") // male | female
+  accommodationType String   @default("") // hostellite | day_scholar
+  hostelName        String?
+  profileComplete   Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  payments Payment[]
+  tickets  Ticket[]
+
+  @@index([gender])
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  userId          String
+  transactionId   String        @unique
+  amount          Float
+  status          String        @default("pending") // pending | approved | rejected | flagged
+  filePath        String
+  fileHash        String
+  fileName        String
+  rejectionReason String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  slaDueAt        DateTime
+  flaggedReason   String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id])
+  ticket  Ticket?
+
+  @@index([fileHash])
+  @@index([status])
+}
+
+model Ticket {
+  id          String    @id @default(uuid())
+  paymentId   String    @unique
+  userId      String
+  ticketUid   String    @unique
+  entryCode   String    @unique
+  qrSignature String
+  status      String    @default("active") // active | used
+  scannedBy   String?
+  scannedAt   DateTime?
+  issuedAt    DateTime  @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([ticketUid])
+  @@index([entryCode])
+  @@index([status])
+}
+
+model Admin {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("admin") // admin | gate_staff
+  name         String
+  createdAt    DateTime @default(now())
+
+  auditLogs AuditLog[]
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  adminId     String?
+  action      String
+  targetTable String
+  targetId    String
+  reason      String?
+  metadata    String?
+  createdAt   DateTime @default(now())
+
+  admin Admin? @relation(fields: [adminId], references: [id])
+
+  @@index([targetTable, targetId])
+  @@index([createdAt])
+}
+
+model RateLimitEntry {
+  id        String   @id @default(uuid())
+  key       String
+  count     Int      @default(1)
+  windowStart DateTime @default(now())
+
+  @@unique([key])
+  @@index([windowStart])
+}
+
+model GateScanQueue {
+  id         String   @id @default(uuid())
+  ticketUid  String
+  scannedBy  String
+  scannedAt  DateTime @default(now())
+  synced     Boolean  @default(false)
+  result     String?
+  createdAt  DateTime @default(now())
+
+  @@index([synced])
+}
