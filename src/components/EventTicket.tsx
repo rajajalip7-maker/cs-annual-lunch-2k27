@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download } from 'lucide-react';
 import { EVENT } from '@/lib/event';
+import { downloadTicketImage } from '@/lib/ticket-client-render';
 
 interface EventTicketProps {
   name: string;
@@ -16,49 +17,6 @@ interface EventTicketProps {
   showDownload?: boolean;
 }
 
-function isMobileDevice() {
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
-
-function resolveImageUrl(paymentId?: string, downloadUrl?: string) {
-  if (paymentId) return `/api/tickets/by-payment/${paymentId}/image`;
-  if (!downloadUrl) return null;
-  if (downloadUrl.includes('/image')) return downloadUrl.split('?')[0];
-  if (downloadUrl.includes('format=png')) return downloadUrl.split('?')[0] + '?format=png';
-  if (downloadUrl.includes('/by-payment/')) return `${downloadUrl.replace(/\?.*$/, '')}/image`;
-  if (downloadUrl.includes('/qr')) return `${downloadUrl.split('?')[0]}?format=png`;
-  return downloadUrl;
-}
-
-async function saveImageBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-
-  if (isMobileDevice() && typeof navigator.share === 'function' && navigator.canShare?.({ files: [new File([blob], filename, { type: blob.type })] })) {
-    try {
-      const file = new File([blob], filename, { type: blob.type });
-      await navigator.share({ files: [file], title: 'Event Ticket' });
-      URL.revokeObjectURL(url);
-      return;
-    } catch {
-      // user cancelled or share unsupported
-    }
-  }
-
-  if (isMobileDevice()) {
-    window.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 120000);
-    return;
-  }
-
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
 export default function EventTicket({
   name,
   rollNo,
@@ -66,8 +24,6 @@ export default function EventTicket({
   entryCode,
   accommodationType,
   qrDataUrl,
-  paymentId,
-  downloadUrl,
   showDownload = true,
 }: EventTicketProps) {
   const ticketRef = useRef<HTMLDivElement>(null);
@@ -82,48 +38,16 @@ export default function EventTicket({
     img.src = EVENT.backgroundImage;
   }, []);
 
-  async function captureTicketImage(): Promise<boolean> {
-    if (!ticketRef.current) return false;
-    try {
-      const html2canvas = (await import('html2canvas')).default;
-      const el = ticketRef.current;
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#0f172a',
-        height: el.scrollHeight,
-        windowHeight: el.scrollHeight,
-        scrollY: -window.scrollY,
-      });
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      if (!blob) return false;
-      await saveImageBlob(blob, `ticket-${rollNo}.png`);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   async function handleDownload() {
     setDownloading(true);
     try {
-      const imagePath = resolveImageUrl(paymentId, downloadUrl);
-
-      if (imagePath) {
-        const url = new URL(imagePath, window.location.origin);
-        url.searchParams.set('t', String(Date.now()));
-        const res = await fetch(url.toString(), { cache: 'no-store', credentials: 'include' });
-        const contentType = res.headers.get('content-type') || '';
-
-        if (res.ok && contentType.includes('image')) {
-          const blob = await res.blob();
-          const ext = contentType.includes('svg') ? 'svg' : 'png';
-          await saveImageBlob(blob, `ticket-${rollNo}.${ext}`);
-          return;
-        }
-      }
-
-      await captureTicketImage();
+      await downloadTicketImage(
+        { name, rollNo, entryCode, ticketUid, accommodationType, qrDataUrl },
+        rollNo
+      );
+    } catch (err) {
+      console.error('Ticket download failed:', err);
+      alert('Could not prepare ticket image. Please screenshot the ticket on this page.');
     } finally {
       setDownloading(false);
     }
@@ -201,11 +125,16 @@ export default function EventTicket({
         </div>
       </div>
 
-      {showDownload && (downloadUrl || paymentId) && (
-        <button onClick={handleDownload} disabled={downloading} className="btn-primary text-sm">
-          <Download className="h-4 w-4" />
-          {downloading ? 'Preparing...' : 'Download Ticket'}
-        </button>
+      {showDownload && (
+        <>
+          <button onClick={handleDownload} disabled={downloading} className="btn-primary text-sm">
+            <Download className="h-4 w-4" />
+            {downloading ? 'Preparing...' : 'Download Ticket'}
+          </button>
+          <p className="max-w-xs text-center text-xs text-slate-500">
+            On phone: tap Download, then long-press the ticket image and choose Save image.
+          </p>
+        </>
       )}
     </div>
   );
