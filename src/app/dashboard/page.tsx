@@ -145,7 +145,7 @@ export default function DashboardPage() {
               <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
                 Please bring this ticket (on your phone or printed) to the event venue on the day. Entry will not be allowed without it.
               </div>
-              <EventTicket {...ticketData} />
+              <EventTicket {...ticketData} paymentId={payment.id} />
             </div>
           )}
         </div>

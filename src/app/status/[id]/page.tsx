@@ -134,6 +134,7 @@ export default function StatusPage() {
                 accommodationType={ticketData.accommodationType}
                 qrDataUrl={ticketData.qrDataUrl}
                 downloadUrl={ticketData.downloadUrl}
+                paymentId={id}
               />
             </div>
           )}

@@ -11,8 +11,52 @@ interface EventTicketProps {
   entryCode: string;
   accommodationType: string;
   qrDataUrl: string;
+  paymentId?: string;
   downloadUrl?: string;
   showDownload?: boolean;
+}
+
+function isMobileDevice() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function resolveImageUrl(paymentId?: string, downloadUrl?: string) {
+  if (paymentId) return `/api/tickets/by-payment/${paymentId}/image`;
+  if (!downloadUrl) return null;
+  if (downloadUrl.includes('/image')) return downloadUrl.split('?')[0];
+  if (downloadUrl.includes('format=png')) return downloadUrl.split('?')[0] + '?format=png';
+  if (downloadUrl.includes('/by-payment/')) return `${downloadUrl.replace(/\?.*$/, '')}/image`;
+  if (downloadUrl.includes('/qr')) return `${downloadUrl.split('?')[0]}?format=png`;
+  return downloadUrl;
+}
+
+async function saveImageBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+
+  if (isMobileDevice() && typeof navigator.share === 'function' && navigator.canShare?.({ files: [new File([blob], filename, { type: blob.type })] })) {
+    try {
+      const file = new File([blob], filename, { type: blob.type });
+      await navigator.share({ files: [file], title: 'Event Ticket' });
+      URL.revokeObjectURL(url);
+      return;
+    } catch {
+      // user cancelled or share unsupported
+    }
+  }
+
+  if (isMobileDevice()) {
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
+    return;
+  }
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 export default function EventTicket({
@@ -22,11 +66,13 @@ export default function EventTicket({
   entryCode,
   accommodationType,
   qrDataUrl,
+  paymentId,
   downloadUrl,
   showDownload = true,
 }: EventTicketProps) {
   const ticketRef = useRef<HTMLDivElement>(null);
   const [bgSrc, setBgSrc] = useState<string>(EVENT.backgroundFallback);
+  const [downloading, setDownloading] = useState(false);
   const typeLabel = accommodationType === 'hostellite' ? 'Hostellite' : 'Day Scholar';
 
   useEffect(() => {
@@ -36,46 +82,50 @@ export default function EventTicket({
     img.src = EVENT.backgroundImage;
   }, []);
 
-  async function handleDownload() {
-    if (downloadUrl) {
-      try {
-        const res = await fetch(`${downloadUrl}?t=${Date.now()}`, { cache: 'no-store' });
-        if (!res.ok) throw new Error('Download failed');
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ticket-${rollNo}.png`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-        return;
-      } catch {
-        // fall back to on-screen capture
-      }
+  async function captureTicketImage(): Promise<boolean> {
+    if (!ticketRef.current) return false;
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const el = ticketRef.current;
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#0f172a',
+        height: el.scrollHeight,
+        windowHeight: el.scrollHeight,
+        scrollY: -window.scrollY,
+      });
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) return false;
+      await saveImageBlob(blob, `ticket-${rollNo}.png`);
+      return true;
+    } catch {
+      return false;
     }
+  }
 
-    if (ticketRef.current) {
-      try {
-        const html2canvas = (await import('html2canvas')).default;
-        const el = ticketRef.current;
-        const canvas = await html2canvas(el, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#0f172a',
-          height: el.scrollHeight,
-          windowHeight: el.scrollHeight,
-          scrollY: -window.scrollY,
-        });
-        const url = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ticket-${rollNo}.png`;
-        a.click();
-      } catch {
-        // no-op
+  async function handleDownload() {
+    setDownloading(true);
+    try {
+      const imagePath = resolveImageUrl(paymentId, downloadUrl);
+
+      if (imagePath) {
+        const url = new URL(imagePath, window.location.origin);
+        url.searchParams.set('t', String(Date.now()));
+        const res = await fetch(url.toString(), { cache: 'no-store', credentials: 'include' });
+        const contentType = res.headers.get('content-type') || '';
+
+        if (res.ok && contentType.includes('image')) {
+          const blob = await res.blob();
+          const ext = contentType.includes('svg') ? 'svg' : 'png';
+          await saveImageBlob(blob, `ticket-${rollNo}.${ext}`);
+          return;
+        }
       }
+
+      await captureTicketImage();
+    } finally {
+      setDownloading(false);
     }
   }
 
@@ -85,18 +135,14 @@ export default function EventTicket({
         ref={ticketRef}
         className="relative w-full max-w-[360px] overflow-hidden rounded-3xl border-2 border-indigo-500/40 shadow-2xl"
       >
-        {/* Background */}
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${bgSrc})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-indigo-950/85 to-slate-900/95" />
-
-        {/* Accent bar */}
         <div className="absolute left-0 right-0 top-0 h-1.5 bg-gradient-to-r from-indigo-500 to-cyan-400" />
 
         <div className="relative flex flex-col p-5 pb-6 text-white">
-          {/* Header */}
           <div className="text-center">
             <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
               {EVENT.subtitle}
@@ -105,7 +151,6 @@ export default function EventTicket({
             <p className="mt-0.5 text-[11px] text-indigo-300">{EVENT.tagline}</p>
           </div>
 
-          {/* Event details */}
           <div className="mt-4 rounded-xl border border-slate-600/50 bg-slate-900/50 p-3 backdrop-blur-sm">
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
@@ -131,7 +176,6 @@ export default function EventTicket({
             </div>
           </div>
 
-          {/* Attendee */}
           <div className="mt-3 rounded-xl border border-indigo-500/30 bg-indigo-950/40 p-3 backdrop-blur-sm">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-indigo-400">
               Attendee
@@ -141,14 +185,12 @@ export default function EventTicket({
             <p className="text-xs text-slate-400">{typeLabel}</p>
           </div>
 
-          {/* QR */}
           <div className="mt-4 flex justify-center">
             <div className="rounded-xl bg-white p-2 shadow-lg">
               <img src={qrDataUrl} alt="Entry QR Code" className="h-36 w-36" />
             </div>
           </div>
 
-          {/* Footer */}
           <div className="mt-2 text-center">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-cyan-400">Ticket ID</p>
             <p className="font-mono text-sm font-bold tracking-wider text-white">{entryCode}</p>
@@ -159,9 +201,10 @@ export default function EventTicket({
         </div>
       </div>
 
-      {showDownload && downloadUrl && (
-        <button onClick={handleDownload} className="btn-primary text-sm">
-          <Download className="h-4 w-4" /> Download Ticket
+      {showDownload && (downloadUrl || paymentId) && (
+        <button onClick={handleDownload} disabled={downloading} className="btn-primary text-sm">
+          <Download className="h-4 w-4" />
+          {downloading ? 'Preparing...' : 'Download Ticket'}
         </button>
       )}
     </div>
