@@ -11,31 +11,30 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status') || 'all';
   const search = searchParams.get('search') || '';
   const gender = searchParams.get('gender') || 'all';
+  const accommodation = searchParams.get('accommodation') || 'all';
 
   const where: Record<string, unknown> = {};
   if (status !== 'all') where.status = status;
 
-  if (gender !== 'all' && search) {
-    where.AND = [
-      { user: { gender } },
-      {
-        OR: [
-          { transactionId: { contains: search } },
-          { user: { rollNo: { contains: search } } },
-          { user: { name: { contains: search } } },
-          { user: { mobile: { contains: search } } },
-        ],
-      },
-    ];
-  } else if (gender !== 'all') {
-    where.user = { gender };
-  } else if (search) {
-    where.OR = [
-      { transactionId: { contains: search } },
-      { user: { rollNo: { contains: search } } },
-      { user: { name: { contains: search } } },
-      { user: { mobile: { contains: search } } },
-    ];
+  const userWhere: Record<string, string> = {};
+  if (gender !== 'all') userWhere.gender = gender;
+  if (accommodation !== 'all') userWhere.accommodationType = accommodation;
+
+  const searchOr = search
+    ? [
+        { transactionId: { contains: search } },
+        { user: { rollNo: { contains: search } } },
+        { user: { name: { contains: search } } },
+        { user: { mobile: { contains: search } } },
+      ]
+    : null;
+
+  if (Object.keys(userWhere).length > 0 && searchOr) {
+    where.AND = [{ user: userWhere }, { OR: searchOr }];
+  } else if (Object.keys(userWhere).length > 0) {
+    where.user = userWhere;
+  } else if (searchOr) {
+    where.OR = searchOr;
   }
 
   const payments = await prisma.payment.findMany({

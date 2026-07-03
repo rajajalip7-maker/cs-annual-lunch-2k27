@@ -34,12 +34,18 @@ export default function AdminDashboard() {
   const [overdue, setOverdue] = useState(0);
   const [filter, setFilter] = useState('pending');
   const [genderFilter, setGenderFilter] = useState('all');
+  const [accommodationFilter, setAccommodationFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const params = new URLSearchParams({ status: filter, search, gender: genderFilter });
+    const params = new URLSearchParams({
+      status: filter,
+      search,
+      gender: genderFilter,
+      accommodation: accommodationFilter,
+    });
     const res = await fetch(`/api/admin/payments?${params}`);
     if (res.status === 401) {
       router.push('/admin/login');
@@ -54,7 +60,7 @@ export default function AdminDashboard() {
     setCounts(countMap);
     setOverdue(data.overdue);
     setLoading(false);
-  }, [filter, genderFilter, search, router]);
+  }, [filter, genderFilter, accommodationFilter, search, router]);
 
   useEffect(() => {
     load();
@@ -90,6 +96,19 @@ export default function AdminDashboard() {
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setSelected(next);
+  }
+
+  const selectablePayments = payments.filter((p) => p.status === 'pending' || p.status === 'flagged');
+
+  function selectPayments(accommodationType?: 'hostellite' | 'day_scholar') {
+    const ids = selectablePayments
+      .filter((p) => !accommodationType || p.user.accommodationType === accommodationType)
+      .map((p) => p.id);
+    setSelected(new Set(ids));
+  }
+
+  function accommodationLabel(type: string) {
+    return type === 'hostellite' ? 'Hostellite' : type === 'day_scholar' ? 'Day Scholar' : '';
   }
 
   const tabs = [
@@ -144,6 +163,15 @@ export default function AdminDashboard() {
             <option value="male">Boys</option>
             <option value="female">Girls</option>
           </select>
+          <select
+            className="input w-auto"
+            value={accommodationFilter}
+            onChange={(e) => setAccommodationFilter(e.target.value)}
+          >
+            <option value="all">All Types</option>
+            <option value="hostellite">Hostellites</option>
+            <option value="day_scholar">Day Scholars</option>
+          </select>
           {selected.size > 0 && (
             <div className="flex gap-2">
               <button onClick={() => handleBulk('approve')} className="btn-success text-sm">
@@ -155,6 +183,36 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+
+        {selectablePayments.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-slate-500">Quick select:</span>
+            <button type="button" onClick={() => selectPayments()} className="btn-secondary py-1 text-xs">
+              All visible ({selectablePayments.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => selectPayments('hostellite')}
+              className="btn-secondary py-1 text-xs"
+            >
+              All hostellites
+              {genderFilter !== 'all' && ` (${genderFilter === 'male' ? 'boys' : 'girls'})`}
+            </button>
+            <button
+              type="button"
+              onClick={() => selectPayments('day_scholar')}
+              className="btn-secondary py-1 text-xs"
+            >
+              All day scholars
+              {genderFilter !== 'all' && ` (${genderFilter === 'male' ? 'boys' : 'girls'})`}
+            </button>
+            {selected.size > 0 && (
+              <button type="button" onClick={() => setSelected(new Set())} className="text-xs text-slate-400 hover:text-white">
+                Clear selection
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="mb-6 flex flex-wrap gap-2">
           {tabs.map((tab) => (
@@ -210,8 +268,11 @@ export default function AdminDashboard() {
                     {p.user.gender && (
                       <span className="ml-2 capitalize">· {p.user.gender}</span>
                     )}
+                    {p.user.accommodationType && (
+                      <span> · {accommodationLabel(p.user.accommodationType)}</span>
+                    )}
                     {p.user.accommodationType === 'hostellite' && p.user.hostelName && (
-                      <span> · {p.user.hostelName}</span>
+                      <span> ({p.user.hostelName})</span>
                     )}
                   </div>
                   {p.flaggedReason && (
