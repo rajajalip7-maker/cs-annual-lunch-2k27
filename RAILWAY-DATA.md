@@ -1,57 +1,65 @@
-# Railway — keep your data (registrations, users, payments)
+# Save your data on Railway (registrations not disappearing)
 
-If registrations disappear after a redeploy or code update, **the database is not on a persistent volume**.
+Railway **does not show Volumes in Settings**. Use the steps below.
 
-## Fix in 3 steps
+## How to add a volume (step by step)
 
-### 1. Variables (Railway → service → Variables)
-
-Set **only this** for the database (delete `file:./dev.db` if present):
+1. Open **https://railway.app** and click your project.
+2. You should see the **canvas** (dark area with your `cs-annual-lunch-2k27` box).
+3. Press **`Ctrl + K`** on your keyboard (Command Palette).
+4. Type **`volume`** and choose **"Create Volume"** or **"Add Volume"**.
+5. Select your service: **`cs-annual-lunch-2k27`**.
+6. For **Mount path**, enter exactly:
 
 ```
-DATABASE_URL=file:/app/prisma/prod.db
+/app/data
 ```
 
-Use the **absolute** path above on Railway.
+7. Click **Create** / **Add**.
 
-### 2. Volumes (Railway → service → Settings → Volumes)
-
-Add **two** volumes:
-
-| Mount path |
-|------------|
-| `/app/prisma` |
-| `/app/uploads` |
-
-Without `/app/prisma`, every deploy starts with an **empty** database.
-
-### 3. Redeploy once
-
-After saving variables and volumes, redeploy the service.
+**Other way:** Right-click empty space on the project canvas → look for **Volume** option.
 
 ---
 
-## Check it worked
+## Variables (Railway → service → Variables tab)
 
-Railway → service → **Deployments** → latest deploy → **View logs**
-
-On startup you should see lines like:
+You can set (optional — app auto-detects volume):
 
 ```
-DATABASE_URL (production): file:/app/prisma/prod.db
-Database file exists (120 KB): /app/prisma/prod.db
-Records in DB — admins: 2, users: 5, payments: 5
+DATABASE_URL=file:/app/data/prod.db
 ```
 
-If you see `Database file will be created` every time you deploy, **the volume is not mounted correctly**.
+Remove `file:./dev.db` if you have it.
 
 ---
 
-## What is NOT lost on refresh
+## Only ONE volume needed
 
-- **Browser refresh** — does not delete data (you may need to log in again)
-- **Downloading a ticket** — does not delete registrations
+Mount **one** volume at `/app/data`. It stores:
 
-## What WAS lost
+- Database (`prod.db`) — registrations, users, payments  
+- Uploads — payment screenshots  
 
-- Data entered **before** volumes were added cannot be recovered — register again once volumes are set up.
+---
+
+## After adding the volume
+
+1. Railway will redeploy automatically.
+2. Register users again (old data before volume cannot be recovered).
+3. New data should **stay** after redeploys.
+
+Check logs: **Deployments → View logs** — look for:
+
+```
+Persist root: /app/data
+Records — admins: 2, users: 3, payments: 3
+```
+
+---
+
+## Still cannot find Volume?
+
+- Make sure you clicked **inside the project** (not the dashboard home).
+- Try **right-click** on the canvas background.
+- Trial/Free plans support volumes (0.5 GB) — you should still see the option.
+- If Volume never appears, upgrade to **Hobby ($5/mo)** or use Railway **Postgres** (ask for help to switch).

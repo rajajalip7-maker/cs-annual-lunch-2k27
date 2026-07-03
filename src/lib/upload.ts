@@ -1,8 +1,11 @@
 import { mkdir, writeFile, readFile, unlink } from 'fs/promises';
 import path from 'path';
 import { hashFileContent } from './crypto';
+import { getUploadDir } from './paths';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'proofs');
+function uploadDir() {
+  return getUploadDir();
+}
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 const ALLOWED_EXT = ['.jpg', '.jpeg', '.png', '.pdf'];
 
@@ -28,20 +31,20 @@ export async function savePaymentProof(
   file: File,
   userId: string
 ): Promise<{ filePath: string; fileHash: string; fileName: string }> {
-  await mkdir(UPLOAD_DIR, { recursive: true });
+  await mkdir(uploadDir(), { recursive: true });
   const buffer = Buffer.from(await file.arrayBuffer());
   const fileHash = hashFileContent(buffer);
   const ext = path.extname(file.name).toLowerCase() || '.jpg';
   const timestamp = Date.now();
   const fileName = `screenshot_${userId}_${timestamp}${ext}`;
-  const filePath = path.join(UPLOAD_DIR, fileName);
+  const filePath = path.join(uploadDir(), fileName);
   await writeFile(filePath, buffer);
   return { filePath, fileHash, fileName };
 }
 
 export async function readPaymentProof(fileName: string): Promise<Buffer | null> {
   const safeName = path.basename(fileName);
-  const filePath = path.join(UPLOAD_DIR, safeName);
+  const filePath = path.join(uploadDir(), safeName);
   try {
     return await readFile(filePath);
   } catch {

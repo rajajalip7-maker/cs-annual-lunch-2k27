@@ -1,35 +1,30 @@
-import { execSync } from 'child_process';
 import { mkdirSync, existsSync, statSync } from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 import { PrismaClient } from '@prisma/client';
-
-const PRODUCTION_DB_PATH = '/app/prisma/prod.db';
-const PRODUCTION_DB_URL = `file:${PRODUCTION_DB_PATH}`;
+import { getDatabaseUrl, getPersistRoot, getUploadDir } from '../src/lib/paths';
 
 async function main() {
-  const prismaDir = path.join(process.cwd(), 'prisma');
-  const uploadsDir = path.join(process.cwd(), 'uploads', 'proofs');
+  const persistRoot = getPersistRoot();
+  const uploadDir = getUploadDir();
 
-  mkdirSync(prismaDir, { recursive: true });
-  mkdirSync(uploadsDir, { recursive: true });
+  mkdirSync(persistRoot, { recursive: true });
+  mkdirSync(uploadDir, { recursive: true });
 
-  if (process.env.NODE_ENV === 'production') {
-    process.env.DATABASE_URL = PRODUCTION_DB_URL;
-    console.log('DATABASE_URL (production):', PRODUCTION_DB_URL);
-  } else {
-    process.env.DATABASE_URL = process.env.DATABASE_URL || 'file:./prisma/prod.db';
-    console.log('DATABASE_URL:', process.env.DATABASE_URL);
-  }
+  process.env.DATABASE_URL = getDatabaseUrl();
+  console.log('Persist root:', persistRoot);
+  console.log('DATABASE_URL:', process.env.DATABASE_URL);
+  console.log('Upload dir:', uploadDir);
 
   const dbPath = process.env.DATABASE_URL.replace(/^file:/, '');
   if (existsSync(dbPath)) {
     const { size } = statSync(dbPath);
-    console.log(`Database file exists (${Math.round(size / 1024)} KB): ${dbPath}`);
+    console.log(`Database file exists (${Math.round(size / 1024)} KB)`);
   } else {
-    console.log(`Database file will be created: ${dbPath}`);
-    console.log(
-      'TIP: On Railway, add a Volume mounted at /app/prisma or data is lost on every redeploy.'
-    );
+    console.log('New database file will be created on first registration.');
+    if (!process.env.RAILWAY_VOLUME_MOUNT_PATH) {
+      console.warn('WARNING: No Railway volume detected. Add a volume at /app/data or data is lost on redeploy.');
+    }
   }
 
   console.log('Applying database schema...');
@@ -42,10 +37,10 @@ async function main() {
       prisma.user.count(),
       prisma.payment.count(),
     ]);
-    console.log(`Records in DB — admins: ${adminCount}, users: ${userCount}, payments: ${paymentCount}`);
+    console.log(`Records — admins: ${adminCount}, users: ${userCount}, payments: ${paymentCount}`);
 
     if (adminCount === 0) {
-      console.log('First boot — creating default admin accounts...');
+      console.log('Creating default admin accounts...');
       execSync('npm run db:seed', { stdio: 'inherit', env: process.env });
     }
   } finally {
