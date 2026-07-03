@@ -15,11 +15,21 @@ export function getPersistRoot(): string {
 }
 
 export function getDatabaseUrl(): string {
-  if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('./dev.db')) {
-    return process.env.DATABASE_URL;
-  }
   const dbFile = path.join(getPersistRoot(), 'prod.db');
-  return `file:${dbFile}`;
+  const volumeUrl = `file:${dbFile}`;
+
+  const configured = process.env.DATABASE_URL?.trim();
+  if (!configured || configured.includes('./dev.db')) {
+    return volumeUrl;
+  }
+
+  // file:./prisma/prod.db writes inside the container, not on the volume
+  if (configured.includes('./') || configured.includes('.\\')) {
+    console.warn(`DATABASE_URL uses a relative path (${configured}); using ${volumeUrl}`);
+    return volumeUrl;
+  }
+
+  return configured;
 }
 
 export function getUploadDir(): string {

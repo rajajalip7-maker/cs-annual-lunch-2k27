@@ -29,7 +29,14 @@ You can set (optional — app auto-detects volume):
 DATABASE_URL=file:/app/data/prod.db
 ```
 
-Remove `file:./dev.db` if you have it.
+**Wrong** (data is lost on redeploy — not on your volume):
+
+```
+DATABASE_URL=file:./prisma/prod.db
+DATABASE_URL=file:./dev.db
+```
+
+Delete or replace those. The app also auto-fixes relative paths in production, but set the correct value above anyway.
 
 ---
 
