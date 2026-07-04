@@ -11,6 +11,8 @@ import {
   AlertTriangle,
   Clock,
   ExternalLink,
+  Download,
+  Trash2,
 } from 'lucide-react';
 
 interface Payment {
@@ -111,6 +113,57 @@ export default function AdminDashboard() {
     return type === 'hostellite' ? 'Hostellite' : type === 'day_scholar' ? 'Day Scholar' : '';
   }
 
+  async function downloadStudentList(
+    gender = genderFilter,
+    accommodation = accommodationFilter,
+    status = filter
+  ) {
+    const params = new URLSearchParams({
+      gender,
+      accommodation,
+      status,
+    });
+    const res = await fetch(`/api/admin/export?${params}`);
+    if (res.status === 401) {
+      router.push('/admin/login');
+      return;
+    }
+    if (!res.ok) {
+      alert('Could not download list. Try again.');
+      return;
+    }
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition');
+    const filename =
+      disposition?.match(/filename="([^"]+)"/)?.[1] ||
+      `students-${new Date().toISOString().slice(0, 10)}.csv`;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleDelete(id: string, name: string, rollNo: string) {
+    if (!confirm(`Delete ${name} (${rollNo})? This removes their registration permanently.`)) return;
+    const res = await fetch(`/api/admin/payments/${id}`, { method: 'DELETE' });
+    if (res.status === 401) {
+      router.push('/admin/login');
+      return;
+    }
+    if (!res.ok) {
+      alert('Could not delete this entry.');
+      return;
+    }
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    load();
+  }
+
   const tabs = [
     { key: 'pending', label: 'Pending', count: counts.pending },
     { key: 'flagged', label: 'Flagged', count: counts.flagged },
@@ -143,6 +196,39 @@ export default function AdminDashboard() {
             {overdue} submission(s) past SLA deadline
           </div>
         )}
+
+        <div className="mb-6 card p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-semibold text-white">Download student list (CSV)</h2>
+              <p className="text-xs text-slate-400">Opens in Excel — name, roll no, phone, type, hostel</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => downloadStudentList(genderFilter, accommodationFilter, filter)}
+              className="btn-primary text-sm"
+            >
+              <Download className="h-4 w-4" /> Download current filter
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => downloadStudentList('all', 'all', 'all')} className="btn-secondary py-1 text-xs">
+              All students
+            </button>
+            <button type="button" onClick={() => downloadStudentList('male', 'hostellite', 'all')} className="btn-secondary py-1 text-xs">
+              Boys hostellites
+            </button>
+            <button type="button" onClick={() => downloadStudentList('male', 'day_scholar', 'all')} className="btn-secondary py-1 text-xs">
+              Boys day scholars
+            </button>
+            <button type="button" onClick={() => downloadStudentList('female', 'hostellite', 'all')} className="btn-secondary py-1 text-xs">
+              Girls hostellites
+            </button>
+            <button type="button" onClick={() => downloadStudentList('female', 'day_scholar', 'all')} className="btn-secondary py-1 text-xs">
+              Girls day scholars
+            </button>
+          </div>
+        </div>
 
         <div className="mb-6 flex flex-wrap items-center gap-4">
           <div className="relative flex-1">
@@ -279,12 +365,22 @@ export default function AdminDashboard() {
                     <div className="mt-1 text-xs text-orange-300">{p.flaggedReason}</div>
                   )}
                 </div>
-                <Link
-                  href={`/admin/review/${p.id}`}
-                  className="btn-primary text-sm"
-                >
-                  Review <ExternalLink className="h-3 w-3" />
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/admin/review/${p.id}`}
+                    className="btn-primary text-sm"
+                  >
+                    Review <ExternalLink className="h-3 w-3" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(p.id, p.user.name, p.user.rollNo)}
+                    className="btn-danger text-sm"
+                    title="Delete registration"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

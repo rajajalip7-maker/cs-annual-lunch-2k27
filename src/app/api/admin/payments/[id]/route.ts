@@ -5,6 +5,7 @@ import { logAudit } from '@/lib/audit';
 import { generateTicketForPayment } from '@/lib/tickets';
 import { rejectionSchema } from '@/lib/validation';
 import { getSlaStatus } from '@/lib/sla';
+import { deletePaymentProof } from '@/lib/upload';
 
 export async function GET(
   _request: NextRequest,
@@ -118,4 +119,50 @@ export async function PATCH(
   }
 
   return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { id } = await params;
+  const payment = await prisma.payment.findUnique({
+    where: { id },
+    include: { user: true, ticket: true },
+  });
+  if (!payment) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  if (payment.fileName) {
+    await deletePaymentProof(payment.fileName);
+  }
+
+  const userId = payment.userId;
+
+  await prisma.$transaction([
+    prisma.ticket.deleteMany({ where: { paymentId: id } }),
+    prisma.payment.delete({ where: { id } }),
+  ]);
+
+  const remainingPayments = await prisma.payment.count({ where: { userId } });
+  if (remainingPayments === 0) {
+    await prisma.ticket.deleteMany({ where: { userId } });
+    await prisma.user.delete({ where: { id: userId } });
+  }
+
+  await logAudit({
+    adminId: session.adminId,
+    action: 'registration_deleted',
+    targetTable: 'payments',
+    targetId: id,
+    metadata: {
+      rollNo: payment.user.rollNo,
+      name: payment.user.name,
+      userDeleted: remainingPayments === 0,
+    },
+  });
+
+  return NextResponse.json({ success: true });
 }

@@ -52,6 +52,16 @@ export async function readPaymentProof(fileName: string): Promise<Buffer | null>
   }
 }
 
+export async function deletePaymentProof(fileName: string) {
+  const safeName = path.basename(fileName);
+  const filePath = path.join(uploadDir(), safeName);
+  try {
+    await unlink(filePath);
+  } catch {
+    // file may already be missing
+  }
+}
+
 export async function deleteExpiredProofs(retentionDays?: number) {
   const days = retentionDays ?? parseInt(process.env.RETENTION_DAYS || '90', 10);
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
